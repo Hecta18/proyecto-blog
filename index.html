@@ -26,8 +26,7 @@
         <div class="section-head">
           <h1 id="titulo-listado" class="section-title">Publicaciones</h1>
           <p class="section-lead">
-            Explora las entradas. La vista de detalle se añadirá en siguientes
-            entregas.
+            Explora las entradas. Usa «Ver detalle» para abrir la ficha completa.
           </p>
         </div>
 
@@ -69,26 +68,39 @@
       </section>
 
       <section
-        class="view view--detail-placeholder"
-        id="view-detail-placeholder"
-        aria-labelledby="titulo-detalle-placeholder"
+        class="view view--detail"
+        id="view-post-detail"
         hidden
+        aria-live="polite"
       >
-        <a class="back-link" href="#/">← Volver al listado</a>
-        <h2 id="titulo-detalle-placeholder" class="section-title">
-          Detalle de publicación
-        </h2>
-        <p class="section-lead">
-          La vista completa con datos de la API se implementará en RF-02.
-          Identificador seleccionado:
-          <strong id="detail-post-id">—</strong>
-        </p>
+        <nav class="detail-nav" aria-label="Navegación de detalle">
+          <a class="back-link" href="#/">← Volver al listado</a>
+        </nav>
+
+        <div id="detail-loading" class="detail-panel" hidden></div>
+
+        <div
+          id="detail-error"
+          class="banner banner--error"
+          role="alert"
+          hidden
+        ></div>
+
+        <article
+          id="detail-read"
+          class="detail-panel detail-article"
+          hidden
+        ></article>
+
+        <div id="detail-edit" class="detail-panel" hidden></div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <p>Proyecto académico — consumo de API REST (RF-01).</p>
+      <p>Proyecto académico — RF-01 (listado) y RF-02 (detalle).</p>
     </footer>
+
+    <div id="toast-root" class="toast-root" aria-live="polite"></div>
 
     <script type="module" src="js/main.js"></script>
   </body>

@@ -115,3 +115,93 @@ export async function fetchPostsPage(page = 1, pageSize = 10) {
     limit: typeof data.limit === "number" ? data.limit : safeSize,
   };
 }
+
+/**
+ * @param {string} url
+ * @param {RequestInit} [init]
+ * @returns {Promise<unknown>}
+ */
+async function requestJson(url, init) {
+  let response;
+  try {
+    response = await fetch(url, init);
+  } catch (err) {
+    const cause = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `No se pudo conectar con el servidor. Comprueba tu conexión o inténtalo más tarde. (${cause})`
+    );
+  }
+
+  if (!response.ok) {
+    await throwForStatus(response);
+  }
+
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("La API devolvió datos que no se pudieron leer como JSON.");
+  }
+}
+
+/**
+ * Publicación individual con autor resuelto (GET por ID).
+ * @param {number} id
+ * @returns {Promise<PostDTO & { authorName: string; tags: string[]; views: number; reactions: { likes?: number; dislikes?: number } }>}
+ */
+export async function fetchPostById(id) {
+  const safeId = Math.floor(Number(id));
+  if (!Number.isFinite(safeId) || safeId < 1) {
+    throw new Error("Identificador de publicación no válido.");
+  }
+
+  const post = await fetchJson(`${API_BASE}/posts/${safeId}`);
+  const authorName = await fetchAuthorName(post.userId);
+
+  return {
+    ...post,
+    authorName,
+  };
+}
+
+/**
+ * @param {number} id
+ * @returns {Promise<unknown>}
+ */
+export async function deletePostById(id) {
+  const safeId = Math.floor(Number(id));
+  if (!Number.isFinite(safeId) || safeId < 1) {
+    throw new Error("Identificador de publicación no válido.");
+  }
+
+  return requestJson(`${API_BASE}/posts/${safeId}`, { method: "DELETE" });
+}
+
+/**
+ * @param {number} id
+ * @param {{ title: string; body: string }} payload
+ * @returns {Promise<PostDTO & { authorName: string }>}
+ */
+export async function updatePostById(id, payload) {
+  const safeId = Math.floor(Number(id));
+  if (!Number.isFinite(safeId) || safeId < 1) {
+    throw new Error("Identificador de publicación no válido.");
+  }
+
+  const updated = await requestJson(`${API_BASE}/posts/${safeId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+    }),
+  });
+
+  const authorName = await fetchAuthorName(updated.userId);
+  return { ...updated, authorName };
+}
+

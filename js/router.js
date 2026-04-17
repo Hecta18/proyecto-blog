@@ -1,5 +1,8 @@
 /**
- * @typedef {{ name: 'list' } | { name: 'detail'; postId: number }} AppRoute
+ * @typedef {{ name: 'list' }} ListRoute
+ * @typedef {{ name: 'detail'; postId: number }} DetailRoute
+ * @typedef {{ name: 'detailEdit'; postId: number }} DetailEditRoute
+ * @typedef {ListRoute | DetailRoute | DetailEditRoute} AppRoute
  */
 
 /**
@@ -9,6 +12,11 @@ export function parseRoute() {
   const raw = location.hash.replace(/^#/, "").trim();
   const path = raw.startsWith("/") ? raw : `/${raw}`;
   const normalized = path === "" || path === "/" ? "/" : path;
+
+  const editMatch = normalized.match(/^\/posts\/(\d+)\/edit$/);
+  if (editMatch) {
+    return { name: "detailEdit", postId: Number(editMatch[1]) };
+  }
 
   const detailMatch = normalized.match(/^\/posts\/(\d+)$/);
   if (detailMatch) {
