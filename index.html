@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog — Publicaciones</title>
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/components.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="site-logo">Blog</p>
+        <p class="site-tagline">Publicaciones desde DummyJSON</p>
+      </div>
+    </header>
+
+    <main id="contenido-principal" class="site-main">
+      <section
+        class="view view--list"
+        id="view-list"
+        aria-labelledby="titulo-listado"
+      >
+        <div class="section-head">
+          <h1 id="titulo-listado" class="section-title">Publicaciones</h1>
+          <p class="section-lead">
+            Explora las entradas. La vista de detalle se añadirá en siguientes
+            entregas.
+          </p>
+        </div>
+
+        <div
+          id="posts-error"
+          class="banner banner--error"
+          role="alert"
+          hidden
+        ></div>
+
+        <div id="posts-skeleton" class="posts-skeleton" aria-hidden="true"></div>
+
+        <div id="posts-empty" class="empty-state" hidden>
+          <p class="empty-state__title">Sin resultados</p>
+          <p class="empty-state__text">
+            No hay publicaciones para mostrar en esta página.
+          </p>
+        </div>
+
+        <div id="posts-grid" class="posts-grid"></div>
+
+        <nav
+          class="pagination"
+          id="posts-pagination"
+          aria-label="Paginación de publicaciones"
+          hidden
+        >
+          <button type="button" class="btn btn--ghost" id="btn-prev">
+            Anterior
+          </button>
+          <p class="pagination__status">
+            Página <span id="page-current">1</span> de
+            <span id="page-total">1</span>
+          </p>
+          <button type="button" class="btn btn--ghost" id="btn-next">
+            Siguiente
+          </button>
+        </nav>
+      </section>
+
+      <section
+        class="view view--detail-placeholder"
+        id="view-detail-placeholder"
+        aria-labelledby="titulo-detalle-placeholder"
+        hidden
+      >
+        <a class="back-link" href="#/">← Volver al listado</a>
+        <h2 id="titulo-detalle-placeholder" class="section-title">
+          Detalle de publicación
+        </h2>
+        <p class="section-lead">
+          La vista completa con datos de la API se implementará en RF-02.
+          Identificador seleccionado:
+          <strong id="detail-post-id">—</strong>
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>Proyecto académico — consumo de API REST (RF-01).</p>
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

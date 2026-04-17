@@ -1,0 +1,73 @@
+:root {
+  --color-bg: #0f1419;
+  --color-surface: #1a222d;
+  --color-surface-elevated: #232d3b;
+  --color-border: #2e3a4c;
+  --color-text: #e8eef5;
+  --color-text-muted: #9aa8b9;
+  --color-accent: #5b9fd4;
+  --color-accent-hover: #7ab3e0;
+  --color-danger: #f07178;
+  --color-danger-bg: rgba(240, 113, 120, 0.12);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell,
+    "Noto Sans", sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+  --max-content: 1120px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: radial-gradient(
+      ellipse 120% 80% at 50% -20%,
+      #1c2a3d 0%,
+      var(--color-bg) 55%
+    )
+    fixed;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.skip-link:focus {
+  position: fixed;
+  left: var(--space-4);
+  top: var(--space-4);
+  z-index: 100;
+  width: auto;
+  height: auto;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: #0f1419;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
