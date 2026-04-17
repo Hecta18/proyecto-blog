@@ -267,6 +267,13 @@
   color: var(--color-danger);
 }
 
+.field-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
 .form-actions {
   display: flex;
   flex-wrap: wrap;

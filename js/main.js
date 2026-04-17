@@ -1,31 +1,37 @@
 import {
+  createPost,
   deletePostById,
   fetchPostById,
   fetchPostsPage,
+  findUserForAuthorName,
   updatePostById,
 } from "./api.js";
 import {
   bindPagination,
   clearPostsLoading,
+  mountCreatePostForm,
   mountPostEditForm,
+  prependPostCard,
   renderPostCards,
   renderPostDetailRead,
   setDetailPhase,
   setEmptyState,
   setErrorBanner,
-  setListDetailVisibility,
+  setMainPanels,
   showDetailLoading,
   showPostsLoading,
   showToast,
 } from "./ui.js";
 import { parseRoute, startRouter } from "./router.js";
-import { validatePostTitleBody } from "./validation.js";
+import { validateCreatePostForm, validatePostTitleBody } from "./validation.js";
 
 const PAGE_SIZE = 10;
 
 const refs = {
   listView: document.getElementById("view-list"),
   detailView: document.getElementById("view-post-detail"),
+  createView: document.getElementById("view-create"),
+  createRoot: document.getElementById("create-form-root"),
   detailLoading: document.getElementById("detail-loading"),
   detailError: document.getElementById("detail-error"),
   detailRead: document.getElementById("detail-read"),
@@ -60,18 +66,31 @@ let currentPage = 1;
 let detailCache = { id: null, post: null };
 /** @type {{ setFieldErrors: (e: { title?: string; body?: string }) => void } | null} */
 let editFormController = null;
+/** @type {ReturnType<typeof mountCreatePostForm> | null} */
+let createFormController = null;
 const deletedPostIds = new Set();
+/** @type {object[]} */
+const pendingListPrepends = [];
 
 function clearEditSurface() {
   refs.detailEdit.replaceChildren();
   editFormController = null;
 }
 
+function showCreateView() {
+  setMainPanels(refs.listView, refs.detailView, refs.createView, "create");
+  createFormController = mountCreatePostForm(refs.createRoot, {
+    onSubmit: (values) => {
+      void handleCreateSubmit(values);
+    },
+  });
+}
+
 /**
  * @param {number} page
  */
 async function loadPostsPage(page) {
-  setListDetailVisibility(refs.listView, refs.detailView, "list");
+  setMainPanels(refs.listView, refs.detailView, refs.createView, "list");
   setErrorBanner(refs.errorBanner, null);
   setEmptyState(refs.emptyState, false);
   refs.pagination.hidden = true;
@@ -86,6 +105,7 @@ async function loadPostsPage(page) {
     if (result.posts.length === 0) {
       setEmptyState(refs.emptyState, true);
     } else {
+      setEmptyState(refs.emptyState, false);
       renderPostCards(refs.grid, result.posts, {
         excludeIds: deletedPostIds,
       });
@@ -106,6 +126,14 @@ async function loadPostsPage(page) {
     });
 
     refs.pagination.hidden = totalPages <= 1;
+
+    if (currentPage === 1 && pendingListPrepends.length > 0) {
+      setEmptyState(refs.emptyState, false);
+      for (let i = 0; i < pendingListPrepends.length; i += 1) {
+        prependPostCard(refs.grid, pendingListPrepends[i]);
+      }
+      pendingListPrepends.length = 0;
+    }
   } catch (err) {
     clearPostsLoading(refs.skeletonHost);
     const message =
@@ -177,11 +205,63 @@ async function handleEditSubmit(postId, values) {
 }
 
 /**
+ * @param {{ title: string; body: string; authorName: string }} values
+ */
+async function handleCreateSubmit(values) {
+  if (!createFormController) {
+    return;
+  }
+
+  const validation = validateCreatePostForm(values);
+  if (!validation.ok) {
+    createFormController.setFieldErrors(validation.errors);
+    return;
+  }
+
+  createFormController.setFieldErrors({});
+  createFormController.setSubmitting(true);
+
+  try {
+    const match = await findUserForAuthorName(values.authorName);
+    if (!match) {
+      createFormController.setFieldErrors({
+        authorName:
+          "No encontramos un usuario con ese nombre. Prueba con nombre o apellido que exista en DummyJSON (por ejemplo «Ava Harris»).",
+      });
+      return;
+    }
+
+    const post = await createPost({
+      title: values.title.trim(),
+      body: values.body.trim(),
+      userId: match.userId,
+    });
+
+    createFormController.resetForm();
+    showToast(
+      refs.toastRoot,
+      "Publicación creada. Ya aparece al inicio del listado (página 1).",
+      "success"
+    );
+
+    pendingListPrepends.push(post);
+    currentPage = 1;
+    location.hash = "#/";
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "No se pudo crear la publicación.";
+    showToast(refs.toastRoot, message, "error");
+  } finally {
+    createFormController.setSubmitting(false);
+  }
+}
+
+/**
  * @param {number} postId
  * @param {{ mode: 'read' | 'edit' }} options
  */
 async function loadPostDetail(postId, options) {
-  setListDetailVisibility(refs.listView, refs.detailView, "detail");
+  setMainPanels(refs.listView, refs.detailView, refs.createView, "detail");
   setErrorBanner(refs.detailError, null);
 
   const cached = detailCache.id === postId && detailCache.post ? detailCache.post : null;
@@ -229,8 +309,8 @@ async function loadPostDetail(postId, options) {
 
   clearEditSurface();
   editFormController = mountPostEditForm(refs.detailEdit, post, {
-    onSubmit: (values) => {
-      void handleEditSubmit(postId, values);
+    onSubmit: (vals) => {
+      void handleEditSubmit(postId, vals);
     },
     onCancel: () => {
       location.hash = `#/posts/${postId}`;
@@ -249,12 +329,17 @@ function applyRoute(route) {
     return;
   }
 
+  if (route.name === "create") {
+    showCreateView();
+    return;
+  }
+
   if (location.hash && !/^#\/?$/i.test(location.hash)) {
     location.hash = "#/";
     return;
   }
 
-  setListDetailVisibility(refs.listView, refs.detailView, "list");
+  setMainPanels(refs.listView, refs.detailView, refs.createView, "list");
   void loadPostsPage(currentPage);
 }
 

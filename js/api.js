@@ -205,3 +205,61 @@ export async function updatePostById(id, payload) {
   return { ...updated, authorName };
 }
 
+/**
+ * Busca un usuario por nombre o apellido para asociar userId al crear un post.
+ * @param {string} authorQuery texto del formulario (nombre, apellido o ambos)
+ * @returns {Promise<{ userId: number; displayName: string } | null>}
+ */
+export async function findUserForAuthorName(authorQuery) {
+  const q = authorQuery.trim();
+  if (!q) {
+    return null;
+  }
+
+  const data = await fetchJson(
+    `${API_BASE}/users/search?q=${encodeURIComponent(q)}`
+  );
+  const users = Array.isArray(data.users) ? data.users : [];
+  if (users.length === 0) {
+    return null;
+  }
+
+  const target = q.toLowerCase().replace(/\s+/g, " ");
+  const fullName = (u) =>
+    `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim().toLowerCase();
+
+  const exact = users.find((u) => fullName(u) === target);
+  const picked = exact ?? users[0];
+  const displayName =
+    `${picked.firstName ?? ""} ${picked.lastName ?? ""}`.trim() ||
+    "Autor sin nombre";
+
+  return { userId: picked.id, displayName };
+}
+
+/**
+ * Crea una publicación (POST simulado en DummyJSON).
+ * @param {{ title: string; body: string; userId: number }} payload
+ * @returns {Promise<PostDTO & { authorName: string }>}
+ */
+export async function createPost(payload) {
+  const created = await requestJson(`${API_BASE}/posts/add`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      userId: payload.userId,
+    }),
+  });
+
+  const authorName = await fetchAuthorName(created.userId);
+  return {
+    ...created,
+    title: created.title ?? payload.title,
+    body: created.body ?? payload.body,
+    authorName,
+  };
+}
+
+

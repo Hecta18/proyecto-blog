@@ -12,8 +12,14 @@
     <a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
     <header class="site-header">
       <div class="site-header__inner">
-        <p class="site-logo">Blog</p>
-        <p class="site-tagline">Publicaciones desde DummyJSON</p>
+        <div class="site-header__brand">
+          <p class="site-logo">Blog</p>
+          <p class="site-tagline">Publicaciones desde DummyJSON</p>
+        </div>
+        <nav class="site-nav" aria-label="Secciones principales">
+          <a class="site-nav__link" href="#/">Inicio</a>
+          <a class="site-nav__link" href="#/create">Crear publicación</a>
+        </nav>
       </div>
     </header>
 
@@ -94,10 +100,19 @@
 
         <div id="detail-edit" class="detail-panel" hidden></div>
       </section>
+
+      <section
+        class="view view--create"
+        id="view-create"
+        hidden
+        aria-label="Crear publicación"
+      >
+        <div id="create-form-root"></div>
+      </section>
     </main>
 
     <footer class="site-footer">
-      <p>Proyecto académico — RF-01 (listado) y RF-02 (detalle).</p>
+      <p>Proyecto académico — RF-01 a RF-03.</p>
     </footer>
 
     <div id="toast-root" class="toast-root" aria-live="polite"></div>

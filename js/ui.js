@@ -60,14 +60,44 @@ export function clearPostsLoading(container) {
 }
 
 /**
- * @param {HTMLElement} grid
- * @param {Array<{
+ * @param {{
  *   id: number;
  *   title: string;
  *   body: string;
  *   authorName: string;
- * }>} posts
+ * }} post
+ * @returns {HTMLElement}
  */
+export function createPostCardElement(post) {
+  const article = document.createElement("article");
+  article.className = "card";
+  article.dataset.postId = String(post.id);
+
+  const title = document.createElement("h2");
+  title.className = "card__title";
+  title.textContent = post.title;
+
+  const excerpt = document.createElement("p");
+  excerpt.className = "card__excerpt";
+  excerpt.textContent = excerptFromBody(post.body);
+
+  const meta = document.createElement("p");
+  meta.className = "card__meta";
+  meta.innerHTML = `Autor: <strong>${escapeHtml(post.authorName)}</strong>`;
+
+  const actions = document.createElement("div");
+  actions.className = "card__actions";
+
+  const link = document.createElement("a");
+  link.className = "btn btn--primary";
+  link.href = `#/posts/${post.id}`;
+  link.textContent = "Ver detalle";
+
+  actions.appendChild(link);
+  article.append(title, excerpt, meta, actions);
+  return article;
+}
+
 /**
  * @param {HTMLElement} grid
  * @param {Array<{
@@ -87,36 +117,24 @@ export function renderPostCards(grid, posts, options = {}) {
     if (excludeIds.has(post.id)) {
       continue;
     }
-    const article = document.createElement("article");
-    article.className = "card";
-    article.dataset.postId = String(post.id);
-
-    const title = document.createElement("h2");
-    title.className = "card__title";
-    title.textContent = post.title;
-
-    const excerpt = document.createElement("p");
-    excerpt.className = "card__excerpt";
-    excerpt.textContent = excerptFromBody(post.body);
-
-    const meta = document.createElement("p");
-    meta.className = "card__meta";
-    meta.innerHTML = `Autor: <strong>${escapeHtml(post.authorName)}</strong>`;
-
-    const actions = document.createElement("div");
-    actions.className = "card__actions";
-
-    const link = document.createElement("a");
-    link.className = "btn btn--primary";
-    link.href = `#/posts/${post.id}`;
-    link.textContent = "Ver detalle";
-
-    actions.appendChild(link);
-    article.append(title, excerpt, meta, actions);
-    fragment.appendChild(article);
+    fragment.appendChild(createPostCardElement(post));
   }
 
   grid.appendChild(fragment);
+}
+
+/**
+ * Inserta una tarjeta al inicio del listado (p. ej. tras POST sin recargar).
+ * @param {HTMLElement} grid
+ * @param {{
+ *   id: number;
+ *   title: string;
+ *   body: string;
+ *   authorName: string;
+ * }} post
+ */
+export function prependPostCard(grid, post) {
+  grid.prepend(createPostCardElement(post));
 }
 
 /**
@@ -193,14 +211,156 @@ export function bindPagination(nav, { page, totalPages, onPrev, onNext }) {
 }
 
 /**
+ * Formulario «crear publicación» (solo validación en JS; sin required/minlength en HTML).
+ * @param {HTMLElement} root
+ * @param {{
+ *   onSubmit: (payload: {
+ *     title: string;
+ *     body: string;
+ *     authorName: string;
+ *   }) => void;
+ * }} handlers
+ * @returns {{
+ *   setFieldErrors: (errors: {
+ *     title?: string;
+ *     body?: string;
+ *     authorName?: string;
+ *   }) => void;
+ *   resetForm: () => void;
+ *   setSubmitting: (busy: boolean) => void;
+ * }}
+ */
+export function mountCreatePostForm(root, handlers) {
+  clearElement(root);
+
+  const head = document.createElement("div");
+  head.className = "section-head";
+  const h1 = document.createElement("h1");
+  h1.className = "section-title";
+  h1.id = "titulo-crear";
+  h1.textContent = "Crear publicación";
+  const lead = document.createElement("p");
+  lead.className = "section-lead";
+  lead.textContent =
+    "Los datos se envían a DummyJSON mediante POST. El autor debe coincidir con un usuario de la API (prueba nombre o apellido, p. ej. «Ava Harris»).";
+  head.append(h1, lead);
+
+  const form = document.createElement("form");
+  form.className = "stack-form";
+  form.noValidate = true;
+
+  const titleWrap = document.createElement("div");
+  titleWrap.className = "field";
+  const titleLabel = document.createElement("label");
+  titleLabel.htmlFor = "create-post-title";
+  titleLabel.textContent = "Título";
+  const titleInput = document.createElement("input");
+  titleInput.type = "text";
+  titleInput.id = "create-post-title";
+  titleInput.name = "title";
+  titleInput.autocomplete = "off";
+  const titleError = document.createElement("p");
+  titleError.className = "field-error";
+  titleError.hidden = true;
+  titleWrap.append(titleLabel, titleInput, titleError);
+
+  const bodyWrap = document.createElement("div");
+  bodyWrap.className = "field";
+  const bodyLabel = document.createElement("label");
+  bodyLabel.htmlFor = "create-post-body";
+  bodyLabel.textContent = "Contenido";
+  const bodyInput = document.createElement("textarea");
+  bodyInput.id = "create-post-body";
+  bodyInput.name = "body";
+  bodyInput.rows = 10;
+  bodyInput.autocomplete = "off";
+  const bodyError = document.createElement("p");
+  bodyError.className = "field-error";
+  bodyError.hidden = true;
+  bodyWrap.append(bodyLabel, bodyInput, bodyError);
+
+  const authorWrap = document.createElement("div");
+  authorWrap.className = "field";
+  const authorLabel = document.createElement("label");
+  authorLabel.htmlFor = "create-post-author";
+  authorLabel.textContent = "Nombre del autor";
+  const authorInput = document.createElement("input");
+  authorInput.type = "text";
+  authorInput.id = "create-post-author";
+  authorInput.name = "authorName";
+  authorInput.autocomplete = "name";
+  const authorHint = document.createElement("p");
+  authorHint.className = "field-hint";
+  authorHint.textContent =
+    "Se busca en la base de usuarios de DummyJSON; si hay varias coincidencias se usa la más cercana al texto.";
+  const authorError = document.createElement("p");
+  authorError.className = "field-error";
+  authorError.hidden = true;
+  authorWrap.append(authorLabel, authorInput, authorHint, authorError);
+
+  const actions = document.createElement("div");
+  actions.className = "form-actions";
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.className = "btn btn--primary";
+  submit.textContent = "Publicar";
+
+  actions.appendChild(submit);
+  form.append(titleWrap, bodyWrap, authorWrap, actions);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    handlers.onSubmit({
+      title: titleInput.value,
+      body: bodyInput.value,
+      authorName: authorInput.value,
+    });
+  });
+
+  root.append(head, form);
+
+  const setFieldErrors = (errors) => {
+    const apply = (el, msg) => {
+      if (msg) {
+        el.textContent = msg;
+        el.hidden = false;
+      } else {
+        el.textContent = "";
+        el.hidden = true;
+      }
+    };
+    apply(titleError, errors.title);
+    apply(bodyError, errors.body);
+    apply(authorError, errors.authorName);
+  };
+
+  return {
+    setFieldErrors,
+    resetForm() {
+      titleInput.value = "";
+      bodyInput.value = "";
+      authorInput.value = "";
+      setFieldErrors({});
+    },
+    setSubmitting(busy) {
+      submit.disabled = busy;
+      titleInput.disabled = busy;
+      bodyInput.disabled = busy;
+      authorInput.disabled = busy;
+    },
+  };
+}
+
+/**
  * @param {HTMLElement} listView
  * @param {HTMLElement} detailView
- * @param {'list' | 'detail'} mode
+ * @param {HTMLElement} createView
+ * @param {'list' | 'detail' | 'create'} mode
  */
-export function setListDetailVisibility(listView, detailView, mode) {
-  const showDetail = mode === "detail";
-  listView.hidden = showDetail;
-  detailView.hidden = !showDetail;
+export function setMainPanels(listView, detailView, createView, mode) {
+  listView.hidden = mode !== "list";
+  detailView.hidden = mode !== "detail";
+  createView.hidden = mode !== "create";
 }
 
 /**

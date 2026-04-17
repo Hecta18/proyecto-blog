@@ -8,6 +8,15 @@
   max-width: var(--max-content);
   margin: 0 auto;
   padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.site-header__brand {
+  flex: 1 1 12rem;
 }
 
 .site-logo {
@@ -21,6 +30,27 @@
   margin: var(--space-1) 0 0;
   font-size: 0.9rem;
   color: var(--color-text-muted);
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.site-nav__link {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.site-nav__link:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-hover);
 }
 
 .site-main {
