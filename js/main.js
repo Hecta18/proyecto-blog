@@ -14,6 +14,7 @@ import {
   prependPostCard,
   renderPostCards,
   renderPostDetailRead,
+  updatePostCardInGrid,
   setDetailPhase,
   setEmptyState,
   setErrorBanner,
@@ -23,7 +24,7 @@ import {
   showToast,
 } from "./ui.js";
 import { parseRoute, startRouter } from "./router.js";
-import { validateCreatePostForm, validatePostTitleBody } from "./validation.js";
+import { validateCreatePostForm, validateEditPostForm } from "./validation.js";
 
 const PAGE_SIZE = 10;
 
@@ -64,13 +65,23 @@ function assertRefs() {
 let currentPage = 1;
 /** @type {{ id: number | null; post: object | null }} */
 let detailCache = { id: null, post: null };
-/** @type {{ setFieldErrors: (e: { title?: string; body?: string }) => void } | null} */
+/** @type {ReturnType<typeof mountPostEditForm> | null} */
 let editFormController = null;
 /** @type {ReturnType<typeof mountCreatePostForm> | null} */
 let createFormController = null;
 const deletedPostIds = new Set();
 /** @type {object[]} */
 const pendingListPrepends = [];
+/** @type {Map<number, { title: string; body: string; authorName: string }>} */
+const listDisplayOverrides = new Map();
+
+/**
+ * @param {object} post
+ */
+function withListDisplayOverrides(post) {
+  const o = listDisplayOverrides.get(post.id);
+  return o ? { ...post, ...o } : post;
+}
 
 function clearEditSurface() {
   refs.detailEdit.replaceChildren();
@@ -106,9 +117,13 @@ async function loadPostsPage(page) {
       setEmptyState(refs.emptyState, true);
     } else {
       setEmptyState(refs.emptyState, false);
-      renderPostCards(refs.grid, result.posts, {
-        excludeIds: deletedPostIds,
-      });
+      renderPostCards(
+        refs.grid,
+        result.posts.map(withListDisplayOverrides),
+        {
+          excludeIds: deletedPostIds,
+        }
+      );
     }
 
     const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
@@ -160,6 +175,7 @@ async function handleDeletePost(postId) {
   try {
     await deletePostById(postId);
     deletedPostIds.add(postId);
+    listDisplayOverrides.delete(postId);
     if (detailCache.id === postId) {
       detailCache = { id: null, post: null };
     }
@@ -181,13 +197,14 @@ async function handleEditSubmit(postId, values) {
     return;
   }
 
-  const validation = validatePostTitleBody(values);
+  const validation = validateEditPostForm(values);
   if (!validation.ok) {
     editFormController.setFieldErrors(validation.errors);
     return;
   }
 
   editFormController.setFieldErrors({});
+  editFormController.setSubmitting(true);
 
   try {
     const updated = await updatePostById(postId, {
@@ -195,12 +212,25 @@ async function handleEditSubmit(postId, values) {
       body: values.body.trim(),
     });
     detailCache = { id: postId, post: updated };
+    listDisplayOverrides.set(postId, {
+      title: updated.title,
+      body: updated.body,
+      authorName: updated.authorName,
+    });
+    updatePostCardInGrid(refs.grid, {
+      id: postId,
+      title: updated.title,
+      body: updated.body,
+      authorName: updated.authorName,
+    });
     showToast(refs.toastRoot, "Cambios guardados correctamente.", "success");
     location.hash = `#/posts/${postId}`;
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "No se pudieron guardar los cambios.";
     showToast(refs.toastRoot, message, "error");
+  } finally {
+    editFormController.setSubmitting(false);
   }
 }
 

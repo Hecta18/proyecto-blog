@@ -25,6 +25,15 @@ export function validatePostTitleBody(fields) {
 }
 
 /**
+ * RF-04: edición solo de título y cuerpo; mismas reglas que en creación para esos campos.
+ * @param {{ title: string; body: string }} fields
+ * @returns {{ ok: boolean; errors: { title?: string; body?: string } }}
+ */
+export function validateEditPostForm(fields) {
+  return validatePostTitleBody(fields);
+}
+
+/**
  * RF-03: título, cuerpo y nombre de autor (solo JS, sin atributos HTML).
  * @param {{ title: string; body: string; authorName: string }} fields
  * @returns {{

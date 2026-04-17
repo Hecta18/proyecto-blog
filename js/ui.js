@@ -138,6 +138,24 @@ export function prependPostCard(grid, post) {
 }
 
 /**
+ * Actualiza una tarjeta existente en el listado (RF-04: reflejo inmediato).
+ * @param {HTMLElement} grid
+ * @param {{
+ *   id: number;
+ *   title: string;
+ *   body: string;
+ *   authorName: string;
+ * }} post
+ */
+export function updatePostCardInGrid(grid, post) {
+  const selector = `[data-post-id="${String(post.id)}"]`;
+  const current = grid.querySelector(selector);
+  if (current instanceof HTMLElement) {
+    current.replaceWith(createPostCardElement(post));
+  }
+}
+
+/**
  * @param {string} value
  */
 function escapeHtml(value) {
@@ -497,6 +515,7 @@ export function renderPostDetailRead(root, post, handlers) {
  * @returns {{
  *   getValues: () => { title: string; body: string };
  *   setFieldErrors: (errors: { title?: string; body?: string }) => void;
+ *   setSubmitting: (busy: boolean) => void;
  * }}
  */
 export function mountPostEditForm(root, post, handlers) {
@@ -593,6 +612,12 @@ export function mountPostEditForm(root, post, handlers) {
       };
       setErr(titleError, errors.title);
       setErr(bodyError, errors.body);
+    },
+    setSubmitting(busy) {
+      submit.disabled = busy;
+      titleInput.disabled = busy;
+      bodyInput.disabled = busy;
+      cancel.disabled = busy;
     },
   };
 }

@@ -182,6 +182,7 @@ export async function deletePostById(id) {
 }
 
 /**
+ * Actualiza título y cuerpo (PATCH; DummyJSON acepta PUT o PATCH).
  * @param {number} id
  * @param {{ title: string; body: string }} payload
  * @returns {Promise<PostDTO & { authorName: string }>}
@@ -193,7 +194,7 @@ export async function updatePostById(id, payload) {
   }
 
   const updated = await requestJson(`${API_BASE}/posts/${safeId}`, {
-    method: "PUT",
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: payload.title,
