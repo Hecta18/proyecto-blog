@@ -156,6 +156,88 @@ export function updatePostCardInGrid(grid, post) {
 }
 
 /**
+ * Quita la tarjeta del listado en el acto (RF-05).
+ * @param {HTMLElement} grid
+ * @param {number} postId
+ */
+export function removePostCardFromGrid(grid, postId) {
+  const el = grid.querySelector(`[data-post-id="${String(postId)}"]`);
+  el?.remove();
+}
+
+/** @type {HTMLDialogElement | null} */
+let deleteConfirmDialog = null;
+
+/**
+ * Diálogo modal de confirmación antes de DELETE (sin eliminar sin aviso).
+ * @param {string} postTitle
+ * @returns {Promise<boolean>} true si el usuario confirma
+ */
+export function confirmPostDeletion(postTitle) {
+  if (!deleteConfirmDialog) {
+    const dialog = document.createElement("dialog");
+    dialog.className = "confirm-dialog";
+    dialog.setAttribute("aria-labelledby", "confirm-delete-title");
+
+    const form = document.createElement("form");
+    form.method = "dialog";
+    form.className = "confirm-dialog__form";
+
+    const h2 = document.createElement("h2");
+    h2.className = "confirm-dialog__title";
+    h2.id = "confirm-delete-title";
+    h2.textContent = "Eliminar publicación";
+
+    const p = document.createElement("p");
+    p.className = "confirm-dialog__body";
+    p.id = "confirm-delete-message";
+
+    const actions = document.createElement("div");
+    actions.className = "confirm-dialog__actions";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "submit";
+    btnCancel.className = "btn btn--ghost";
+    btnCancel.value = "cancel";
+    btnCancel.textContent = "Cancelar";
+
+    const btnConfirm = document.createElement("button");
+    btnConfirm.type = "submit";
+    btnConfirm.className = "btn btn--danger";
+    btnConfirm.value = "confirm";
+    btnConfirm.textContent = "Eliminar";
+
+    actions.append(btnCancel, btnConfirm);
+    form.append(h2, p, actions);
+    dialog.append(form);
+    document.body.appendChild(dialog);
+    deleteConfirmDialog = dialog;
+  }
+
+  const messageEl = deleteConfirmDialog.querySelector("#confirm-delete-message");
+  if (messageEl) {
+    messageEl.textContent = `¿Seguro que deseas eliminar «${postTitle}»? Se enviará una solicitud DELETE a la API y la entrada dejará de mostrarse en la aplicación.`;
+  }
+
+  return new Promise((resolve) => {
+    const dialog = deleteConfirmDialog;
+    if (!(dialog instanceof HTMLDialogElement)) {
+      resolve(false);
+      return;
+    }
+
+    const onClose = () => {
+      resolve(dialog.returnValue === "confirm");
+      dialog.removeEventListener("close", onClose);
+    };
+    dialog.addEventListener("close", onClose);
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+  });
+}
+
+/**
  * @param {string} value
  */
 function escapeHtml(value) {
@@ -187,6 +269,22 @@ export function setErrorBanner(banner, message) {
  */
 export function setEmptyState(emptyState, visible) {
   emptyState.hidden = !visible;
+}
+
+/**
+ * @param {HTMLElement} emptyState
+ * @param {string} title
+ * @param {string} description
+ */
+export function setEmptyStateCopy(emptyState, title, description) {
+  const t = emptyState.querySelector(".empty-state__title");
+  const d = emptyState.querySelector(".empty-state__text");
+  if (t) {
+    t.textContent = title;
+  }
+  if (d) {
+    d.textContent = description;
+  }
 }
 
 /**

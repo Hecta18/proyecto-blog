@@ -263,4 +263,105 @@ export async function createPost(payload) {
   };
 }
 
+/**
+ * Etiquetas disponibles para posts (RF-06 filtro por tag).
+ * @returns {Promise<string[]>}
+ */
+export async function fetchPostTagList() {
+  const data = await fetchJson(`${API_BASE}/posts/tag-list`);
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Usuarios para el desplegable «autor» (RF-06).
+ * @returns {Promise<Array<{ id: number; label: string }>>}
+ */
+export async function fetchUsersForAuthorFilter() {
+  const data = await fetchJson(
+    `${API_BASE}/users?limit=0&select=id,firstName,lastName`
+  );
+  const users = Array.isArray(data.users) ? data.users : [];
+  return users
+    .map((u) => ({
+      id: u.id,
+      label:
+        `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || `Usuario ${u.id}`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "es"));
+}
+
+/**
+ * @typedef {{ searchText: string; userId: string; tag: string }} PostListFilters
+ */
+
+/**
+ * RF-06: filtros combinables (texto en título/cuerpo, autor, etiqueta).
+ * Descarga el conjunto de posts y aplica filtros en cliente para poder combinar AND.
+ * @param {number} page
+ * @param {number} pageSize
+ * @param {PostListFilters} filters
+ * @returns {Promise<PostsPageResult>}
+ */
+export async function fetchPostsPageWithFilters(page, pageSize, filters) {
+  const data = await fetchJson(`${API_BASE}/posts?limit=0&skip=0`);
+  let posts = Array.isArray(data.posts) ? data.posts : [];
+
+  const q = (filters.searchText ?? "").trim().toLowerCase();
+  if (q) {
+    posts = posts.filter(
+      (p) =>
+        String(p.title ?? "")
+          .toLowerCase()
+          .includes(q) ||
+        String(p.body ?? "")
+          .toLowerCase()
+          .includes(q)
+    );
+  }
+
+  const uid = (filters.userId ?? "").trim();
+  if (uid) {
+    const n = Number(uid);
+    if (Number.isFinite(n)) {
+      posts = posts.filter((p) => p.userId === n);
+    }
+  }
+
+  const tag = (filters.tag ?? "").trim().toLowerCase();
+  if (tag) {
+    posts = posts.filter(
+      (p) =>
+        Array.isArray(p.tags) &&
+        p.tags.some((t) => String(t).toLowerCase() === tag)
+    );
+  }
+
+  const total = posts.length;
+  const safePage = Math.max(1, Math.floor(page));
+  const safeSize = Math.max(1, Math.floor(pageSize));
+  const skip = (safePage - 1) * safeSize;
+  const pagePosts = posts.slice(skip, skip + safeSize);
+
+  const userIds = [...new Set(pagePosts.map((p) => p.userId).filter(Boolean))];
+  const names = await Promise.all(
+    userIds.map(async (id) => {
+      const authorName = await fetchAuthorName(id);
+      return [id, authorName];
+    })
+  );
+  const authorById = Object.fromEntries(names);
+
+  const enriched = pagePosts.map((post) => ({
+    ...post,
+    authorName: authorById[post.userId] ?? "Autor desconocido",
+  }));
+
+  return {
+    posts: enriched,
+    total,
+    skip,
+    limit: safeSize,
+  };
+}
+
 

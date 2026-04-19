@@ -3,6 +3,9 @@ import {
   deletePostById,
   fetchPostById,
   fetchPostsPage,
+  fetchPostsPageWithFilters,
+  fetchPostTagList,
+  fetchUsersForAuthorFilter,
   findUserForAuthorName,
   updatePostById,
 } from "./api.js";
@@ -15,9 +18,12 @@ import {
   renderPostCards,
   renderPostDetailRead,
   updatePostCardInGrid,
+  removePostCardFromGrid,
+  confirmPostDeletion,
   setDetailPhase,
   setEmptyState,
   setErrorBanner,
+  setEmptyStateCopy,
   setMainPanels,
   showDetailLoading,
   showPostsLoading,
@@ -27,6 +33,16 @@ import { parseRoute, startRouter } from "./router.js";
 import { validateCreatePostForm, validateEditPostForm } from "./validation.js";
 
 const PAGE_SIZE = 10;
+
+const EMPTY_LIST_DEFAULT = {
+  title: "Sin resultados",
+  text: "No hay publicaciones para mostrar en esta página.",
+};
+
+const EMPTY_LIST_FILTERED = {
+  title: "Sin coincidencias",
+  text: "Ninguna publicación cumple los filtros actuales. Prueba otros criterios o pulsa «Limpiar».",
+};
 
 const refs = {
   listView: document.getElementById("view-list"),
@@ -43,6 +59,11 @@ const refs = {
   grid: document.getElementById("posts-grid"),
   pagination: document.getElementById("posts-pagination"),
   toastRoot: document.getElementById("toast-root"),
+  filterForm: document.getElementById("posts-filters"),
+  filterSearch: document.getElementById("filter-search"),
+  filterAuthor: document.getElementById("filter-author"),
+  filterTag: document.getElementById("filter-tag"),
+  filterClear: document.getElementById("filter-clear"),
 };
 
 function detailPanels() {
@@ -60,6 +81,81 @@ function assertRefs() {
       throw new Error(`No se encontró el elemento DOM requerido: ${key}`);
     }
   }
+}
+
+/**
+ * @returns {{ searchText: string; userId: string; tag: string }}
+ */
+function getListFiltersFromDom() {
+  const search = refs.filterSearch;
+  const author = refs.filterAuthor;
+  const tag = refs.filterTag;
+  return {
+    searchText: search instanceof HTMLInputElement ? search.value : "",
+    userId: author instanceof HTMLSelectElement ? author.value : "",
+    tag: tag instanceof HTMLSelectElement ? tag.value : "",
+  };
+}
+
+function listFiltersActive() {
+  const f = getListFiltersFromDom();
+  return Boolean(
+    f.searchText.trim() || f.userId.trim() || f.tag.trim()
+  );
+}
+
+async function initListFilters() {
+  if (
+    !(refs.filterForm instanceof HTMLFormElement) ||
+    !(refs.filterSearch instanceof HTMLInputElement) ||
+    !(refs.filterAuthor instanceof HTMLSelectElement) ||
+    !(refs.filterTag instanceof HTMLSelectElement) ||
+    !(refs.filterClear instanceof HTMLButtonElement)
+  ) {
+    return;
+  }
+
+  try {
+    const [tags, users] = await Promise.all([
+      fetchPostTagList(),
+      fetchUsersForAuthorFilter(),
+    ]);
+
+    const sortedTags = [...tags].sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" })
+    );
+    for (const tag of sortedTags) {
+      const opt = document.createElement("option");
+      opt.value = tag;
+      opt.textContent = tag;
+      refs.filterTag.appendChild(opt);
+    }
+
+    for (const u of users) {
+      const opt = document.createElement("option");
+      opt.value = String(u.id);
+      opt.textContent = u.label;
+      refs.filterAuthor.appendChild(opt);
+    }
+  } catch (err) {
+    const msg =
+      err instanceof Error ? err.message : "Error al cargar filtros.";
+    showToast(refs.toastRoot, msg, "error");
+  }
+
+  refs.filterForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    currentPage = 1;
+    void loadPostsPage(1);
+  });
+
+  refs.filterClear.addEventListener("click", () => {
+    refs.filterSearch.value = "";
+    refs.filterAuthor.value = "";
+    refs.filterTag.value = "";
+    currentPage = 1;
+    void loadPostsPage(1);
+  });
 }
 
 let currentPage = 1;
@@ -110,13 +206,28 @@ async function loadPostsPage(page) {
   refs.grid.replaceChildren();
 
   try {
-    const result = await fetchPostsPage(page, PAGE_SIZE);
+    const useFilters = listFiltersActive();
+    const filters = getListFiltersFromDom();
+
+    const result = useFilters
+      ? await fetchPostsPageWithFilters(page, PAGE_SIZE, filters)
+      : await fetchPostsPage(page, PAGE_SIZE);
     clearPostsLoading(refs.skeletonHost);
 
     if (result.posts.length === 0) {
       setEmptyState(refs.emptyState, true);
+      setEmptyStateCopy(
+        refs.emptyState,
+        useFilters ? EMPTY_LIST_FILTERED.title : EMPTY_LIST_DEFAULT.title,
+        useFilters ? EMPTY_LIST_FILTERED.text : EMPTY_LIST_DEFAULT.text
+      );
     } else {
       setEmptyState(refs.emptyState, false);
+      setEmptyStateCopy(
+        refs.emptyState,
+        EMPTY_LIST_DEFAULT.title,
+        EMPTY_LIST_DEFAULT.text
+      );
       renderPostCards(
         refs.grid,
         result.posts.map(withListDisplayOverrides),
@@ -142,7 +253,11 @@ async function loadPostsPage(page) {
 
     refs.pagination.hidden = totalPages <= 1;
 
-    if (currentPage === 1 && pendingListPrepends.length > 0) {
+    if (
+      currentPage === 1 &&
+      pendingListPrepends.length > 0 &&
+      !listFiltersActive()
+    ) {
       setEmptyState(refs.emptyState, false);
       for (let i = 0; i < pendingListPrepends.length; i += 1) {
         prependPostCard(refs.grid, pendingListPrepends[i]);
@@ -165,9 +280,13 @@ async function loadPostsPage(page) {
  * @param {number} postId
  */
 async function handleDeletePost(postId) {
-  const ok = window.confirm(
-    "¿Eliminar esta publicación? Se enviará una solicitud DELETE a la API."
-  );
+  const cached = detailCache.id === postId && detailCache.post ? detailCache.post : null;
+  const titleForMessage =
+    typeof cached?.title === "string" && cached.title.trim()
+      ? cached.title.trim()
+      : `publicación #${postId}`;
+
+  const ok = await confirmPostDeletion(titleForMessage);
   if (!ok) {
     return;
   }
@@ -176,10 +295,25 @@ async function handleDeletePost(postId) {
     await deletePostById(postId);
     deletedPostIds.add(postId);
     listDisplayOverrides.delete(postId);
+    for (let i = pendingListPrepends.length - 1; i >= 0; i -= 1) {
+      if (Number(pendingListPrepends[i]?.id) === postId) {
+        pendingListPrepends.splice(i, 1);
+      }
+    }
     if (detailCache.id === postId) {
       detailCache = { id: null, post: null };
     }
-    showToast(refs.toastRoot, "Publicación eliminada correctamente.", "success");
+
+    removePostCardFromGrid(refs.grid, postId);
+    if (refs.grid.children.length === 0) {
+      setEmptyState(refs.emptyState, true);
+    }
+
+    showToast(
+      refs.toastRoot,
+      "La publicación se eliminó correctamente.",
+      "success"
+    );
     location.hash = "#/";
   } catch (err) {
     const message =
@@ -373,9 +507,10 @@ function applyRoute(route) {
   void loadPostsPage(currentPage);
 }
 
-function init() {
+async function init() {
   assertRefs();
+  await initListFilters();
   startRouter(applyRoute);
 }
 
-init();
+void init();

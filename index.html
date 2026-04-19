@@ -33,8 +33,46 @@
           <h1 id="titulo-listado" class="section-title">Publicaciones</h1>
           <p class="section-lead">
             Explora las entradas. Usa «Ver detalle» para abrir la ficha completa.
+            Puedes combinar filtros para acotar el listado.
           </p>
         </div>
+
+        <form
+          id="posts-filters"
+          class="filters-bar"
+          aria-label="Filtros del listado"
+        >
+          <div class="filters-bar__fields">
+            <div class="field field--filter">
+              <label for="filter-search">Buscar texto</label>
+              <input
+                id="filter-search"
+                type="search"
+                name="search"
+                placeholder="En título o contenido"
+                autocomplete="off"
+              />
+            </div>
+            <div class="field field--filter">
+              <label for="filter-author">Autor</label>
+              <select id="filter-author" name="author">
+                <option value="">Todos los autores</option>
+              </select>
+            </div>
+            <div class="field field--filter">
+              <label for="filter-tag">Etiqueta</label>
+              <select id="filter-tag" name="tag">
+                <option value="">Todas las etiquetas</option>
+              </select>
+            </div>
+          </div>
+          <div class="filters-bar__actions">
+            <button type="submit" class="btn btn--primary">Aplicar filtros</button>
+            <button type="button" class="btn btn--ghost" id="filter-clear">
+              Limpiar
+            </button>
+          </div>
+        </form>
 
         <div
           id="posts-error"
@@ -112,7 +150,7 @@
     </main>
 
     <footer class="site-footer">
-      <p>Proyecto académico — RF-01 a RF-04.</p>
+      <p>Proyecto académico — RF-01 a RF-06.</p>
     </footer>
 
     <div id="toast-root" class="toast-root" aria-live="polite"></div>
