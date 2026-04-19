@@ -24,6 +24,8 @@ import {
   setEmptyState,
   setErrorBanner,
   setEmptyStateCopy,
+  setListLoadingState,
+  setDetailShellBusy,
   setMainPanels,
   showDetailLoading,
   showPostsLoading,
@@ -202,6 +204,14 @@ async function loadPostsPage(page) {
   setEmptyState(refs.emptyState, false);
   refs.pagination.hidden = true;
 
+  setListLoadingState({
+    listView: refs.listView,
+    skeletonHost: refs.skeletonHost,
+    filterForm: refs.filterForm,
+    paginationNav: refs.pagination,
+    loading: true,
+  });
+
   showPostsLoading(refs.skeletonHost);
   refs.grid.replaceChildren();
 
@@ -273,6 +283,14 @@ async function loadPostsPage(page) {
     setErrorBanner(refs.errorBanner, message);
     setEmptyState(refs.emptyState, false);
     refs.grid.replaceChildren();
+  } finally {
+    setListLoadingState({
+      listView: refs.listView,
+      skeletonHost: refs.skeletonHost,
+      filterForm: refs.filterForm,
+      paginationNav: refs.pagination,
+      loading: false,
+    });
   }
 }
 
@@ -307,6 +325,19 @@ async function handleDeletePost(postId) {
     removePostCardFromGrid(refs.grid, postId);
     if (refs.grid.children.length === 0) {
       setEmptyState(refs.emptyState, true);
+      if (listFiltersActive()) {
+        setEmptyStateCopy(
+          refs.emptyState,
+          EMPTY_LIST_FILTERED.title,
+          EMPTY_LIST_FILTERED.text
+        );
+      } else {
+        setEmptyStateCopy(
+          refs.emptyState,
+          EMPTY_LIST_DEFAULT.title,
+          EMPTY_LIST_DEFAULT.text
+        );
+      }
     }
 
     showToast(
@@ -427,10 +458,12 @@ async function handleCreateSubmit(values) {
 async function loadPostDetail(postId, options) {
   setMainPanels(refs.listView, refs.detailView, refs.createView, "detail");
   setErrorBanner(refs.detailError, null);
+  setDetailShellBusy(refs.detailView, false);
 
   const cached = detailCache.id === postId && detailCache.post ? detailCache.post : null;
 
   if (!cached) {
+    setDetailShellBusy(refs.detailView, true);
     setDetailPhase(detailPanels(), "loading");
     clearEditSurface();
     showDetailLoading(refs.detailLoading);
@@ -446,8 +479,10 @@ async function loadPostDetail(postId, options) {
           : "No se pudo cargar la publicación.";
       setErrorBanner(refs.detailError, message);
       setDetailPhase(detailPanels(), "error");
+      setDetailShellBusy(refs.detailView, false);
       return;
     }
+    setDetailShellBusy(refs.detailView, false);
   }
 
   const post = detailCache.post;
@@ -457,6 +492,7 @@ async function loadPostDetail(postId, options) {
       "No hay datos de publicación disponibles. Vuelve al listado e inténtalo de nuevo."
     );
     setDetailPhase(detailPanels(), "error");
+    setDetailShellBusy(refs.detailView, false);
     return;
   }
 

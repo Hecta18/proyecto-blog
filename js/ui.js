@@ -257,10 +257,12 @@ export function setErrorBanner(banner, message) {
   if (!message) {
     banner.hidden = true;
     banner.textContent = "";
+    banner.removeAttribute("aria-live");
     return;
   }
   banner.hidden = false;
   banner.textContent = message;
+  banner.setAttribute("aria-live", "assertive");
 }
 
 /**
@@ -269,6 +271,11 @@ export function setErrorBanner(banner, message) {
  */
 export function setEmptyState(emptyState, visible) {
   emptyState.hidden = !visible;
+  if (visible) {
+    emptyState.setAttribute("role", "status");
+  } else {
+    emptyState.removeAttribute("role");
+  }
 }
 
 /**
@@ -463,8 +470,55 @@ export function mountCreatePostForm(root, handlers) {
       titleInput.disabled = busy;
       bodyInput.disabled = busy;
       authorInput.disabled = busy;
+      const shell = root.closest("#view-create");
+      if (shell instanceof HTMLElement) {
+        shell.setAttribute("aria-busy", busy ? "true" : "false");
+      }
     },
   };
+}
+
+/**
+ * Listado: indicadores de carga accesibles y bloqueo de filtros/paginación (RF-07).
+ * @param {object} opts
+ * @param {HTMLElement} opts.listView
+ * @param {HTMLElement} opts.skeletonHost
+ * @param {HTMLElement | null} [opts.filterForm]
+ * @param {HTMLElement | null} [opts.paginationNav]
+ * @param {boolean} opts.loading
+ */
+export function setListLoadingState(opts) {
+  const { listView, skeletonHost, filterForm, paginationNav, loading } = opts;
+
+  listView.classList.toggle("view--loading", loading);
+  listView.setAttribute("aria-busy", loading ? "true" : "false");
+  skeletonHost.setAttribute("aria-hidden", loading ? "false" : "true");
+
+  if (filterForm instanceof HTMLFormElement) {
+    filterForm.classList.toggle("filters-bar--loading", loading);
+    filterForm.querySelectorAll("input, select, button").forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.disabled = loading;
+      }
+    });
+  }
+
+  if (loading && paginationNav instanceof HTMLElement) {
+    paginationNav.querySelectorAll("button").forEach((btn) => {
+      if (btn instanceof HTMLButtonElement) {
+        btn.disabled = true;
+      }
+    });
+  }
+}
+
+/**
+ * @param {HTMLElement} detailView
+ * @param {boolean} busy
+ */
+export function setDetailShellBusy(detailView, busy) {
+  detailView.setAttribute("aria-busy", busy ? "true" : "false");
+  detailView.classList.toggle("view--detail-loading", busy);
 }
 
 /**
@@ -716,6 +770,10 @@ export function mountPostEditForm(root, post, handlers) {
       titleInput.disabled = busy;
       bodyInput.disabled = busy;
       cancel.disabled = busy;
+      const shell = root.closest("#view-post-detail");
+      if (shell instanceof HTMLElement) {
+        shell.setAttribute("aria-busy", busy ? "true" : "false");
+      }
     },
   };
 }

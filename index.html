@@ -28,6 +28,7 @@
         class="view view--list"
         id="view-list"
         aria-labelledby="titulo-listado"
+        aria-busy="false"
       >
         <div class="section-head">
           <h1 id="titulo-listado" class="section-title">Publicaciones</h1>
@@ -116,6 +117,7 @@
         id="view-post-detail"
         hidden
         aria-live="polite"
+        aria-busy="false"
       >
         <nav class="detail-nav" aria-label="Navegación de detalle">
           <a class="back-link" href="#/">← Volver al listado</a>
@@ -144,16 +146,23 @@
         id="view-create"
         hidden
         aria-label="Crear publicación"
+        aria-busy="false"
       >
         <div id="create-form-root"></div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <p>Proyecto académico — RF-01 a RF-06.</p>
+      <p>Proyecto académico — RF-01 a RF-07.</p>
     </footer>
 
-    <div id="toast-root" class="toast-root" aria-live="polite"></div>
+    <div
+      id="toast-root"
+      class="toast-root"
+      aria-live="polite"
+      aria-relevant="additions text"
+      aria-atomic="false"
+    ></div>
 
     <script type="module" src="js/main.js"></script>
   </body>

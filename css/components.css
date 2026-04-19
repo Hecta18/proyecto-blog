@@ -432,6 +432,18 @@
   gap: var(--space-3);
 }
 
+.view--list.view--loading {
+  position: relative;
+}
+
+.filters-bar--loading {
+  opacity: 0.88;
+}
+
+.view--detail-loading {
+  min-height: 12rem;
+}
+
 .pagination {
   display: flex;
   flex-wrap: wrap;
